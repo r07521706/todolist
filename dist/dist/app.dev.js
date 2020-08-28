@@ -325,10 +325,7 @@ window.App = {
             }); // unsubscribes the subscription
 
             subscription.unsubscribe(function (error, success) {
-              if (success) console.log('Successfully unsubscribed!');else {
-                console.log(error);
-                App.renderTasks();
-              }
+              if (success) console.log('Successfully unsubscribed!');
             });
 
           case 8:

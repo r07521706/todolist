@@ -33,7 +33,6 @@ window.App = {
     loadAccount: async () => {
         App.account =  await web3.eth.getAccounts()
         web3.eth.defaultAccount = App.account[0]
-        console.log(App.account)
         $('#account').html(App.account)
         },
     loadContract: async () => {
@@ -55,11 +54,9 @@ window.App = {
              tmp_ans = await App.todoList.todoList(i,{from: App.account[0]})
              tmp_ans_list.push(tmp_ans)
         }   
-        console.log(tmp_ans['2'])
         for( let i = 0; i<listLength;i++){
 
             let tmp_ans = tmp_ans_list[i]
-            console.log(tmp_ans[0],tmp_ans[1],tmp_ans[3])
             if(tmp_ans[3]===true) continue;
             let var_p = document.createElement("p")
             let var_div2 = document.createElement("div")
@@ -101,7 +98,7 @@ window.App = {
             else if (tmp_ans[1]===false){
                 $(var_p).css("text-decoration" ,"none")
             }
-            var_div2.innerHTML = '<p>-刪除</p>'
+            var_div2.innerHTML = '<p>delete</p>'
             var_div2.className = "del-info"
             wrapper.append(checkbox)
             wrapper.append(label1)
@@ -118,16 +115,14 @@ window.App = {
             const content = $('#newTask').val()
             $("#overlay").show();
             const result = await App.todoList.addTodo(content,{from: App.account[0]})
-            
-            console.log(result)
             window.location.reload()
             // $("#overlay").hide();
             var subscription = web3.eth.subscribe('logs', {
                 address:App.todoList.address,
                 topics: [App.todoList.address]
             }, function(error, result){
-                if (!error)
-                    console.log(result);
+                
+                if (!error);
                     setTimeout(function(){
                         App.renderTasks()
                     }, 1000); 
@@ -139,6 +134,10 @@ window.App = {
             subscription.unsubscribe(function(error, success){
                 if(success)
                     console.log('Successfully unsubscribed!');
+                else{
+                    console.log(error);
+                    App.renderTasks();
+                }
                    
             });
 

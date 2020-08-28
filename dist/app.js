@@ -8,13 +8,31 @@ window.App = {
         await App.render()
       },
     loadWeb3: async () => {
-            App.web3Provider = web3.currentProvider
-            web3= new Web3(web3.currentProvider)
-            console.log('use metamask')
+
+        if (window.ethereum) {
+            App.web3Provider = window.ethereum;
+            try {
+              // Request account access
+              await window.ethereum.enable();
+            } catch (error) {
+              // User denied account access...
+              console.error("User denied account access")
+            }
+          }
+          // Legacy dapp browsers...
+          else if (window.web3) {
+            App.web3Provider = window.web3.currentProvider;
+          }
+          // If no injected web3 instance is detected, fall back to Ganache
+          else {
+            App.web3Provider = new Web3.providers.HttpProvider('http://localhost:8545');
+          }
+          web3 = new Web3(App.web3Provider);
+
         },
     loadAccount: async () => {
         App.account =  await web3.eth.getAccounts()
-        console.log(App.account)
+        web3.eth.defaultAccount = App.account[0]
         $('#account').html(App.account)
         },
     loadContract: async () => {
@@ -22,22 +40,23 @@ window.App = {
         App.contracts.TodoList = TruffleContract(todoList)
         App.contracts.TodoList.setProvider(App.web3Provider)
         App.todoList = await App.contracts.TodoList.deployed()
+
         },
     render: async () => {
         await App.renderTasks()
         },
     renderTasks: async () => {
         $("#overlay").show();
-        let listLength = await App.todoList.listLength()
+        let listLength = await App.todoList.listLength({from: App.account[0]})
         let tmp_ans;
         let tmp_ans_list = []
         for( var i = 0; i<listLength;i++){
-             tmp_ans = await App.todoList.todoList(i)
+             tmp_ans = await App.todoList.todoList(i,{from: App.account[0]})
              tmp_ans_list.push(tmp_ans)
         }   
-        for( var i = 0; i<listLength;i++){
+        for( let i = 0; i<listLength;i++){
+
             let tmp_ans = tmp_ans_list[i]
-            console.log(tmp_ans[0],tmp_ans[1],tmp_ans[3])
             if(tmp_ans[3]===true) continue;
             let var_p = document.createElement("p")
             let var_div2 = document.createElement("div")
@@ -60,7 +79,7 @@ window.App = {
 
             label1.onclick=async (e)=>{
                 $("#overlay").show();
-                await App.todoList.toggle(tmp_ans[2]['c'][0])
+                await App.todoList.toggle(i,{from: App.account[0]})
                 $(".wrapper").remove()
                 App.renderTasks()
                 // $("#overlay").hide()
@@ -68,7 +87,7 @@ window.App = {
             $(checkbox2).prop('checked',tmp_ans[3])
             label2.onclick=async (e)=>{
                 $("#overlay").show();
-                await App.todoList.deleteTodo(tmp_ans[2]['c'][0])
+                await App.todoList.deleteTodo(i,{from: App.account[0]})
                 $(".wrapper").remove()
                 App.renderTasks()   
             }
@@ -79,7 +98,7 @@ window.App = {
             else if (tmp_ans[1]===false){
                 $(var_p).css("text-decoration" ,"none")
             }
-            var_div2.innerHTML = '<p>-刪除</p>'
+            var_div2.innerHTML = '<p>delete</p>'
             var_div2.className = "del-info"
             wrapper.append(checkbox)
             wrapper.append(label1)
@@ -95,17 +114,19 @@ window.App = {
         createTask: async () => {
             const content = $('#newTask').val()
             $("#overlay").show();
-            const result = await App.todoList.addTodo(content)
-            console.log(result)
-            
-
+            const result = await App.todoList.addTodo(content,{from: App.account[0]})
+    
+            window.location.reload()
+            // $("#overlay").hide();
             var subscription = web3.eth.subscribe('logs', {
-                address: '0x7f9A7058336D81920D9AD9c58895cA6E5a2d2cd3',
-                topics: ['0x7f9A7058336D81920D9AD9c58895cA6E5a2d2cd3']
+                address:App.todoList.address,
+                topics: [App.todoList.address]
             }, function(error, result){
-                if (!error)
-                    console.log(result);
-                    window.location.reload()
+                if (!error);
+                    setTimeout(function(){
+                        App.renderTasks()
+                    }, 1000); 
+                    
                     
             });
             
@@ -113,7 +134,7 @@ window.App = {
             subscription.unsubscribe(function(error, success){
                 if(success)
                     console.log('Successfully unsubscribed!');
-                    $("#overlay").hide();
+                   
             });
 
 
